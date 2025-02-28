@@ -1,0 +1,16 @@
+# Node.js dependencies
+node_modules/
+
+# Environment variables (Never push sensitive keys!)
+.env
+
+# Firebase service account (If not using Vercel environment variables)
+serviceAccount.json
+
+# Logs and cache
+npm-debug.log
+yarn-error.log
+.DS_Store
+
+# Vercel build files (optional)
+.vercel
