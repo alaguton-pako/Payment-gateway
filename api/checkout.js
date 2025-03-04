@@ -25,8 +25,8 @@ export default async function handler(req, res) {
       metadata: { name },
       line_items: [{ price: stripePriceId, quantity: 1 }],
       mode: "payment",
-      success_url: "https://www.topteamlimited.com/success",
-      cancel_url: "https://www.topteamlimited.com/cancel",
+      success_url: "https://www.topteamlimited.com/training",
+      cancel_url: "https://www.topteamlimited.com/training",
     });
 
     // ✅ Save Payment Intent to Firebase Firestore
