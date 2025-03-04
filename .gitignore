@@ -2,7 +2,7 @@
 node_modules/
 
 # Environment variables (Never push sensitive keys!)
-# .env
+.env
 
 # Firebase service account (If not using Vercel environment variables)
 serviceAccount.json
