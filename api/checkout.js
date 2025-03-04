@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     // ✅ Save Payment Intent to Firebase Firestore
     const db = admin.firestore();
-    await db.collection("payments").doc(session.id).set({
+    await db.collection("trainingPayments").doc(session.id).set({
       email,
       name,
       stripePriceId,
