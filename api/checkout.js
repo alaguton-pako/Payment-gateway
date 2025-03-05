@@ -7,6 +7,16 @@ dotenv.config(); // Load environment variables
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async function handler(req, res) {
+  // ✅ Add CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Allow all origins
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // ✅ Handle preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -45,4 +55,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
-// This code snippet creates a new Stripe Checkout session using the Stripe API. The required fields are extracted from the request body, and the session is created with the specified payment method types, customer email, metadata, line items, and success and cancel URLs. The session URL is then returned in the response.
