@@ -22,9 +22,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, name, stripePriceId } = req.body;
+    const { email, name, phone, course, stripePriceId } = req.body;
 
-    if (!email || !name || !stripePriceId) {
+    if (!email || !name || !phone || !course || !stripePriceId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -32,18 +32,20 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: email,
-      metadata: { name },
+      metadata: { name, phone, course }, // ✅ Store metadata
       line_items: [{ price: stripePriceId, quantity: 1 }],
       mode: "payment",
-      success_url: "https://www.topteamlimited.com/training",
-      cancel_url: "https://www.topteamlimited.com/training",
+      success_url: "https://topteamlimiteddevelopment.netlify.app/training",
+      cancel_url: "https://topteamlimiteddevelopment.netlify.app/training",
     });
 
-    // ✅ Save Payment Intent to Firebase Firestore
+    // ✅ Save Payment Details to Firebase Firestore
     const db = admin.firestore();
     await db.collection("trainingPayments").doc(session.id).set({
       email,
       name,
+      phone,
+      course,
       stripePriceId,
       status: "pending",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -55,4 +57,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
-// let hope we push from my code base now
