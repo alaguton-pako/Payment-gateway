@@ -3,10 +3,10 @@ import dotenv from "dotenv";
 import { buffer } from "micro";
 import admin from "./firebaseAdmin";
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET; // Set this in your .env file
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET; 
 
 export const config = { api: { bodyParser: false } }; // Required for Stripe Webhooks
 
@@ -27,8 +27,38 @@ export default async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ✅ Log the event type to check if Stripe is sending requests
-  console.log(`Received event: ${event.type}`);
+  console.log(`Received event: ${event.type}`); // ✅ Log event type
+
+  const session = event.data.object;
+  const db = admin.firestore();
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      // ✅ Payment successful → Update status to "completed"
+      await db.collection("trainingPayments").doc(session.id).update({
+        status: "completed",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`✅ Payment completed: ${session.id}`);
+    } else if (event.type === "checkout.session.expired") {
+      // ✅ Payment session expired → Update status to "expired"
+      await db.collection("trainingPayments").doc(session.id).update({
+        status: "expired",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`⚠️ Payment expired: ${session.id}`);
+    } else if (event.type === "payment_intent.payment_failed") {
+      // ✅ Payment failed → Update status to "failed"
+      await db.collection("trainingPayments").doc(session.id).update({
+        status: "failed",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`❌ Payment failed: ${session.id}`);
+    }
+  } catch (error) {
+    console.error("❌ Error updating Firestore:", error);
+    return res.status(500).send("Error updating Firestore.");
+  }
 
   res.status(200).json({ received: true });
 }
