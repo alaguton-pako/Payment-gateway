@@ -6,7 +6,7 @@ import admin from "./firebaseAdmin";
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET; 
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export const config = { api: { bodyParser: false } }; // Required for Stripe Webhooks
 
@@ -34,12 +34,21 @@ export default async function handler(req, res) {
 
   try {
     if (event.type === "checkout.session.completed") {
-      // ✅ Payment successful → Update status to "completed"
-      await db.collection("trainingPayments").doc(session.id).update({
-        status: "completed",
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      console.log(`✅ Payment completed: ${session.id}`);
+      // ✅ Check if payment was successful
+      if (session.payment_status === "paid") {
+        await db.collection("trainingPayments").doc(session.id).update({
+          status: "completed",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`✅ Payment completed: ${session.id}`);
+      } else {
+        // Handle unpaid sessions (e.g., SEPA debit)
+        await db.collection("trainingPayments").doc(session.id).update({
+          status: "unpaid",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`⚠️ Payment unpaid: ${session.id}`);
+      }
     } else if (event.type === "checkout.session.expired") {
       // ✅ Payment session expired → Update status to "expired"
       await db.collection("trainingPayments").doc(session.id).update({
@@ -47,13 +56,29 @@ export default async function handler(req, res) {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       console.log(`⚠️ Payment expired: ${session.id}`);
-    } else if (event.type === "payment_intent.payment_failed") {
-      // ✅ Payment failed → Update status to "failed"
+    } else if (event.type === "checkout.session.async_payment_failed") {
+      // ✅ Handle asynchronous payment failures (e.g., SEPA)
       await db.collection("trainingPayments").doc(session.id).update({
         status: "failed",
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       console.log(`❌ Payment failed: ${session.id}`);
+    } else if (event.type === "payment_intent.payment_failed") {
+      // ✅ Handle payment intent failures by querying Firestore
+      const paymentIntent = event.data.object;
+      const snapshot = await db
+        .collection("trainingPayments")
+        .where("paymentIntentId", "==", paymentIntent.id)
+        .get();
+
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        await doc.ref.update({
+          status: "failed",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`❌ Payment failed: ${paymentIntent.id}`);
+      }
     }
   } catch (error) {
     console.error("❌ Error updating Firestore:", error);

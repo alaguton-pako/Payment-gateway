@@ -48,6 +48,7 @@ export default async function handler(req, res) {
       course,
       stripePriceId,
       status: "pending",
+      paymentIntentId: session.payment_intent, // ✅ Store payment intent ID
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
